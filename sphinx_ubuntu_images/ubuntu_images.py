@@ -178,6 +178,7 @@ class UbuntuImagesDirective(SphinxDirective):
 
     option_spec = {
         "releases": str,
+        "flavor": lambda s: s.strip().lower(),
         "lts-only": lambda _s: True,
         "image-types": parse_set,
         "archs": parse_set,
@@ -202,10 +203,15 @@ class UbuntuImagesDirective(SphinxDirective):
             "meta-release-development",
             "https://changelogs.ubuntu.com/meta-release-development",
         )
-        cdimage_template = self.options.get(
-            "cdimage-template",
-            "https://cdimage.ubuntu.com/releases/{release.codename}/release/",
-        )
+        flavor = self.options.get("flavor") or "ubuntu"
+        if "cdimage-template" in self.options:
+            cdimage_template = self.options["cdimage-template"]
+        else:
+            cdimage_template = (
+                "https://cdimage.ubuntu.com/releases/"
+                if flavor == "ubuntu"
+                else f"https://cdimage.ubuntu.com/{flavor}/releases/"
+            ) + "{release.codename}/release/"
 
         warnings: list[nodes.Node] = []
         if "suffix" in self.options:
@@ -241,7 +247,8 @@ class UbuntuImagesDirective(SphinxDirective):
             release_item = nodes.list_item(
                 "",
                 nodes.paragraph(
-                    text=f"Ubuntu {release.version} ({release.name}) images:"
+                    text=f"{flavor.replace('-', ' ').title()} "
+                    f"{release.version} ({release.name}) images:"
                 ),
             )
             images = filter_images(
@@ -252,6 +259,7 @@ class UbuntuImagesDirective(SphinxDirective):
                 archs=self.options.get("archs"),
                 image_types=self.options.get("image-types"),
                 suffixes=self.options.get("suffixes"),
+                flavors={flavor},
                 matches=self.options.get("matches"),
             )
             if images:
