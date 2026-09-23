@@ -370,7 +370,7 @@ class Release(t.NamedTuple):
 
 
 image_re = re.compile(
-    r"^ubuntu-(?P<version>[\d.]+)"
+    r"^(?P<flavor>[a-z][a-z0-9-]*?)-(?P<version>[\d.]+)"
     r"-(?P<image_type>[^+.]*)"
     r"-(?P<arch>[^-+.]+)"
     r"(?P<suffix>\+.*)?"
@@ -410,6 +410,16 @@ class Image(t.NamedTuple):
             msg = f"Invalid image name: {self.name}"
             raise ValueError(msg)
         return matched.group(field) or ""
+
+    @property
+    def flavor(self) -> str:
+        """Return the Ubuntu flavor of the image.
+
+        Returns a :class:`str` indicating the Ubuntu flavor of the image, i.e.
+        the prefix of the filename before the version, for example "ubuntu",
+        "xubuntu", or "ubuntu-mate".
+        """
+        return self._parse_field("flavor")
 
     @property
     def version(self) -> str:

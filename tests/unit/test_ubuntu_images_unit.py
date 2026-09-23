@@ -148,6 +148,35 @@ class TestImage:
         """Test compression extraction."""
         assert sample_image.compression == "xz"
 
+    def test_flavor_property(self, sample_image):
+        """Test flavor extraction."""
+        assert sample_image.flavor == "ubuntu"
+
+    def test_flavor_property_alternate_flavor(self):
+        """Test flavor extraction for a non-default flavor."""
+        image = Image(
+            url="http://cdimage.ubuntu.com/xubuntu/releases/resolute/release/xubuntu-26.04-minimal-amd64.iso",
+            name="xubuntu-26.04-minimal-amd64.iso",
+            date=dt.date(2026, 8, 26),
+            sha256="2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886c678605d1b7f",
+        )
+        assert image.flavor == "xubuntu"
+        assert image.version == "26.04"
+        assert image.image_type == "minimal"
+        assert image.arch == "amd64"
+
+    def test_flavor_property_multi_hyphen(self):
+        """Test flavor extraction for multi-hyphen flavor prefixes."""
+        image = Image(
+            url="http://cdimage.ubuntu.com/releases/noble/release/ubuntu-mate-24.04-desktop-arm64+raspi.img.xz",
+            name="ubuntu-mate-24.04-desktop-arm64+raspi.img.xz",
+            date=dt.date(2024, 8, 27),
+            sha256="5bd01d2a51196587b3fb2899a8f078a2a080278a83b3c8faa91f8daba750d00c",
+        )
+        assert image.flavor == "ubuntu-mate"
+        assert image.version == "24.04"
+        assert image.suffix == "+raspi"
+
 
 class TestFilterReleases:
     """Test the filter_releases function."""
