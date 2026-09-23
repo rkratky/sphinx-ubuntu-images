@@ -2,7 +2,7 @@
 
 The ``.. ubuntu-images`` directive is a custom directive to generate bulleted
 download lists of supported Ubuntu distro images for specific release ranges,
-suffixes, image-types, and architectures.
+flavors, suffixes, image-types, and architectures.
 
 The options that may be specified under the directive are as follows:
 
@@ -10,6 +10,15 @@ The options that may be specified under the directive are as follows:
     A comma or space-separated list of partial dash-delimited release ranges
     (as release codenames or numbers). See below for examples. If unspecified,
     all releases will be included.
+
+``:flavor:`` *flavor (string)*
+    The flavor of Ubuntu images to list, e.g. ``xubuntu``, ``kubuntu``, or
+    ``lubuntu``. Defaults to ``ubuntu`` (the "vanilla" flavor). Images are
+    sourced from the equivalent flavor directory under cdimage.ubuntu.com
+    (e.g. https://cdimage.ubuntu.com/xubuntu/releases/...), and only
+    filenames with a matching prefix (e.g. ``xubuntu-26.04-minimal-amd64.iso``)
+    are included. The flavor name is also used in the heading of each
+    release entry.
 
 ``:lts-only:`` *(no value)*
     If specified, only LTS releases will be included in the output. Interim
@@ -88,6 +97,13 @@ Examples of usage::
 
     .. ubuntu-images::
         :suffixes: +visionfive
+
+    All Xubuntu minimal desktop images from resolute onwards
+
+    .. ubuntu-images::
+        :flavor: xubuntu
+        :releases: resolute-
+        :image-types: minimal
 
     All supported LTS armhf and arm64 images
 
@@ -173,7 +189,7 @@ class UbuntuImagesDirective(SphinxDirective):
 
     Provides the ``.. ubuntu-images::`` directive to generate bulleted download
     lists of supported Ubuntu distro images for specific release ranges,
-    suffixes, image-types, and architectures.
+    flavors, suffixes, image-types, and architectures.
     """
 
     option_spec = {
@@ -1069,6 +1085,22 @@ __test__ = {
         'iso'
         >>> arm_img.compression
         ''
+        >>> xub_img = Image(
+        ... 'http://cdimage.ubuntu.com/xubuntu/releases/resolute/release/'
+        ... 'xubuntu-26.04.1-minimal-riscv64.iso',
+        ... 'xubuntu-26.04.1-minimal-riscv64.iso',
+        ... dt.datetime(2026, 8, 26, 23, 40, 0),
+        ... '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886c678605d1b7f')
+        >>> pi_img.flavor
+        'ubuntu'
+        >>> xub_img.flavor
+        'xubuntu'
+        >>> xub_img.version
+        '26.04.1'
+        >>> xub_img.image_type
+        'minimal'
+        >>> xub_img.arch
+        'riscv64'
     """,
     "bad-url": """
     The URL provided to get_entry must be valid::
@@ -1292,6 +1324,64 @@ __test__ = {
         ...     ) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
         /.../index.rst:3: ERROR: no images found for specified filters...
         <BLANKLINE>
+    """,
+    "flavor-option": """
+    Check that the ``:flavor:`` option restricts images to those with a
+    matching filename prefix, and uses the flavor name in the output
+    heading::
+
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> ts = dt.datetime(2021, 10, 25)
+        >>> foo = b'foo' * 123456
+        >>> noble = 'noble'
+        >>> images = {
+        ... f'{noble}/ubuntu-24.04-desktop-amd64.iso': foo,
+        ... f'{noble}/xubuntu-24.04-desktop-amd64.iso': foo,
+        ... f'{noble}/xubuntu-24.04-minimal-amd64.iso': foo,
+        ... }
+        >>> files = _make_index(_make_sums(images), ts) | _make_releases()
+        >>> tmp_dir = tempfile.TemporaryDirectory()
+        >>> tmp = Path(tmp_dir.name)
+        >>> with tmp_dir, _test_server(files) as url:
+        ...     (tmp / 'src').mkdir()
+        ...     (tmp / 'build').mkdir()
+        ...     (tmp / 'tree').mkdir()
+        ...     _ = (tmp / 'src' / 'index.rst').write_text(f'''\\
+        ...     Download one of the supported images:
+        ...
+        ...     .. ubuntu-images::
+        ...         :flavor: xubuntu
+        ...         :releases: noble
+        ...         :meta-release: {url}meta-release
+        ...         :meta-release-development: {url}meta-release-development
+        ...         :cdimage-template: {url}{{release.codename}}/
+        ...     ''')
+        ...     app = Sphinx(
+        ...         srcdir=tmp / 'src', confdir=None,
+        ...         outdir=tmp / 'build', doctreedir=tmp / 'tree',
+        ...         buildername='html', status=None, warning=None)
+        ...     _ = setup(app)
+        ...     app.build()
+        ...     print(
+        ...         (tmp / 'build' / 'index.html').read_text()
+        ...     ) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+        <!DOCTYPE html>
+        <BLANKLINE>
+        <html...>
+        ...
+        <ul>
+        <li><p>Xubuntu 24.04 LTS (Noble Numbat) images:</p>
+        <ul>
+        <li><a class="reference download external" download=""
+        href="...">xubuntu-24.04-desktop-amd64.iso</a></li>
+        <li><a class="reference download external" download=""
+        href="...">xubuntu-24.04-minimal-amd64.iso</a></li>
+        </ul>
+        </li>
+        </ul>
+        ...
+        </html>
     """,
 }
 
