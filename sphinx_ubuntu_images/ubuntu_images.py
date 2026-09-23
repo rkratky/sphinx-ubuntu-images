@@ -666,6 +666,7 @@ def filter_images(
     archs: set[str] | None = None,
     image_types: set[str] | None = None,
     suffixes: set[str] | None = None,
+    flavors: set[str] | None = None,
     matches: re.Pattern[str] | None = None,
 ) -> t.Sequence[Image]:
     r"""Filter images according to directive options.
@@ -694,6 +695,10 @@ def filter_images(
         ['ubuntu-24.04.1-preinstalled-server-riscv64+unmatched.img.xz']
         >>> [i.name for i in filter_images(images, suffixes={''})]
         ['ubuntu-24.04.1-live-server-riscv64.img.gz']
+        >>> [i.name for i in filter_images(images, flavors={'xubuntu'})]
+        []
+        >>> len(list(filter_images(images, flavors={'ubuntu'})))
+        5
         >>> regex = re.compile(r'(24\.04.*\.gz|server.*\+unmatched)')
         >>> [i.name # doctest: +NORMALIZE_WHITESPACE
         ... for i in filter_images(images, matches=regex)]
@@ -706,6 +711,7 @@ def filter_images(
         if (archs is None or image.arch in archs)
         and (image_types is None or image.image_type in image_types)
         and (suffixes is None or image.suffix in suffixes)
+        and (flavors is None or image.flavor in flavors)
         and (matches is None or matches.search(image.name))
     ]
 

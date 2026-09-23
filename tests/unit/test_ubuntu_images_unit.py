@@ -313,6 +313,20 @@ class TestFilterImages:
         result = filter_images(sample_images, suffixes={"+raspi", ""})
         assert len(result) == 3
 
+    def test_filter_by_flavors(self, sample_images):
+        """Test filtering by flavors."""
+        result = filter_images(sample_images, flavors={"ubuntu"})
+        assert len(result) == 3
+
+    def test_filter_by_flavors_no_match(self, sample_images):
+        """Test filtering by a flavor with no matching images."""
+        result = filter_images(sample_images, flavors={"xubuntu"})
+        assert result == []
+
+    def test_filter_by_flavors_none_includes_all(self, sample_images):
+        """Test that flavors=None includes images of any flavor."""
+        assert list(filter_images(sample_images)) == list(sample_images)
+
     def test_filter_by_regex(self, sample_images):
         """Test filtering by regex pattern."""
         pattern = re.compile(r".*server.*")
