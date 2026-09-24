@@ -9,6 +9,7 @@ from docutils import nodes
 from docutils.statemachine import StringList
 from sphinx_ubuntu_images.ubuntu_images import (
     Image,
+    ImagesNotFoundError,
     Release,
     UbuntuImagesDirective,
     filter_images,
@@ -609,8 +610,16 @@ class TestUbuntuImagesDirective:
 
     def test_flavor_option_empty_value(self):
         """Test that :flavor: with no value converts to an empty string."""
-        assert UbuntuImagesDirective.option_spec["flavor"](None) == ""
-        assert UbuntuImagesDirective.option_spec["flavor"](" Xubuntu ") == "xubuntu"
+        assert (
+            UbuntuImagesDirective.option_spec["flavor"](None)  # pyright: ignore[reportOptionalSubscript, reportArgumentType]
+            == ""
+        )
+        assert (
+            UbuntuImagesDirective.option_spec["flavor"](  # pyright: ignore[reportOptionalSubscript]
+                " Xubuntu "
+            )
+            == "xubuntu"
+        )
 
     @patch("sphinx_ubuntu_images.ubuntu_images.get_releases")
     @patch("sphinx_ubuntu_images.ubuntu_images.get_images")
@@ -636,3 +645,94 @@ class TestUbuntuImagesDirective:
             url="https://cdimage.ubuntu.com/releases/noble/release/",
             supported=True,
         )
+
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_releases")
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_images")
+    def test_run_flavor_skips_missing_release_dirs(
+        self, mock_get_images, mock_get_releases, mock_directive
+    ):
+        """Test that releases missing from a flavor's tree are skipped."""
+        mock_get_releases.return_value = [
+            Release(
+                codename="trusty",
+                name="Trusty Tahr",
+                version="14.04 LTS",
+                date=dt.datetime(2014, 4, 17, tzinfo=dt.timezone.utc),
+                upgradable=True,
+            ),
+            Release(
+                codename="noble",
+                name="Noble Numbat",
+                version="24.04 LTS",
+                date=dt.datetime(2024, 4, 25, tzinfo=dt.timezone.utc),
+                upgradable=True,
+            ),
+        ]
+
+        def get_images(url, supported):
+            if "trusty" in url:
+                raise ImagesNotFoundError(
+                    f"unable to get {url}; are you sure the path is correct?"
+                )
+            return [
+                Image(
+                    url="http://example.com/xubuntu-24.04-desktop-amd64.iso",
+                    name="xubuntu-24.04-desktop-amd64.iso",
+                    date=dt.date(2024, 4, 25),
+                    sha256="abcd1234" * 8,
+                )
+            ]
+
+        mock_get_images.side_effect = get_images
+        mock_directive.options = {"flavor": "xubuntu"}
+
+        result = mock_directive.run()
+
+        assert len(result) == 1
+        assert result[0][0][0].astext() == "Xubuntu 24.04 LTS (Noble Numbat) images:"
+        assert mock_get_images.call_count == 2
+
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_releases")
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_images")
+    def test_run_flavor_explicit_template_missing_dir_raises(
+        self, mock_get_images, mock_get_releases, mock_directive
+    ):
+        """Test that missing dirs stay fatal with an explicit template."""
+        mock_get_releases.return_value = [
+            Release(
+                codename="noble",
+                name="Noble Numbat",
+                version="24.04 LTS",
+                date=dt.datetime(2024, 4, 25, tzinfo=dt.timezone.utc),
+                upgradable=True,
+            )
+        ]
+        mock_get_images.side_effect = ImagesNotFoundError("unable to get")
+        mock_directive.options = {
+            "flavor": "xubuntu",
+            "cdimage-template": "https://example.com/{release.codename}/",
+        }
+
+        with pytest.raises(ImagesNotFoundError):
+            mock_directive.run()
+
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_releases")
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_images")
+    def test_run_ubuntu_missing_dir_raises(
+        self, mock_get_images, mock_get_releases, mock_directive
+    ):
+        """Test that missing dirs stay fatal for the default flavor."""
+        mock_get_releases.return_value = [
+            Release(
+                codename="noble",
+                name="Noble Numbat",
+                version="24.04 LTS",
+                date=dt.datetime(2024, 4, 25, tzinfo=dt.timezone.utc),
+                upgradable=True,
+            )
+        ]
+        mock_get_images.side_effect = ImagesNotFoundError("unable to get")
+        mock_directive.options = {}
+
+        with pytest.raises(ImagesNotFoundError):
+            mock_directive.run()

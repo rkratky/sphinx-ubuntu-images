@@ -66,6 +66,10 @@ flavor's own directory on cdimage.ubuntu.com (e.g.
 `https://cdimage.ubuntu.com/xubuntu/releases/...`), and only filenames with
 a matching prefix are included.
 
+Releases the flavor never published are skipped. Note that support data
+follows mainline Ubuntu, whose LTS time-frames (and ESM) outlast those of
+most flavors, so consider an explicit `:releases:` range.
+
 #### LTS releases only
 
 ```rst

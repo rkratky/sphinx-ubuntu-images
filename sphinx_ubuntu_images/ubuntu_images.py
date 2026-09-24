@@ -20,6 +20,12 @@ The options that may be specified under the directive are as follows:
     are included. The flavor name is also used in the heading of each
     release entry.
 
+    Releases missing from the flavor's releases directory are skipped, as
+    flavors publish only a subset of the mainline releases. Note, however,
+    that release support data follows mainline Ubuntu, whose LTS time-frames
+    (and ESM) outlast those of most flavors; an explicit ``:releases:``
+    range may therefore be appropriate.
+
 ``:lts-only:`` *(no value)*
     If specified, only LTS releases will be included in the output. Interim
     releases are excluded.
@@ -142,6 +148,7 @@ import time
 import typing as t
 from email.utils import formatdate, parsedate
 from html.parser import HTMLParser
+from http import HTTPStatus
 from pathlib import Path
 from textwrap import dedent
 from threading import Thread
@@ -277,6 +284,9 @@ class UbuntuImagesDirective(SphinxDirective):
             supported=True,
         )
         flavor_title = flavor_titles.get(flavor, flavor.replace("-", " ").title())
+        # Flavors only publish a subset of the mainline releases, so missing
+        # release directories are tolerated on flavor-derived cdimage URLs
+        missing_ok = flavor != "ubuntu" and "cdimage-template" not in self.options
         for release in reversed(releases):
             release_item = nodes.list_item(
                 "",
@@ -284,11 +294,17 @@ class UbuntuImagesDirective(SphinxDirective):
                     text=f"{flavor_title} {release.version} ({release.name}) images:"
                 ),
             )
-            images = filter_images(
-                get_images(
+            try:
+                release_images = get_images(
                     url=cdimage_template.format(release=release),
                     supported=release.supported,
-                ),
+                )
+            except ImagesNotFoundError:
+                if not missing_ok:
+                    raise
+                continue
+            images = filter_images(
+                release_images,
                 archs=self.options.get("archs"),
                 image_types=self.options.get("image-types"),
                 suffixes=self.options.get("suffixes"),
@@ -626,6 +642,10 @@ def filter_releases(
     ]
 
 
+class ImagesNotFoundError(ValueError):
+    """Raised when a cdimage directory does not exist on the server."""
+
+
 @functools.lru_cache
 def get_images(
     url: str,
@@ -663,11 +683,12 @@ def get_images(
             io.TextIOWrapper(data, encoding="utf-8", errors="strict") as page,
         ):
             parser.feed(page.read())
-    except HTTPError:
+    except HTTPError as exc:
         # Supported releases should *always* have images
-        raise ValueError(
-            f"unable to get {url}; are you sure the path is correct?"
-        ) from None
+        msg = f"unable to get {url}; are you sure the path is correct?"
+        if exc.code == HTTPStatus.NOT_FOUND:
+            raise ImagesNotFoundError(msg) from None
+        raise ValueError(msg) from None
     # Grab all the files in the directory
     files: dict[str, tuple[str, dt.date]] = {}
     for row in parser.table:
@@ -1133,8 +1154,8 @@ __test__ = {
           File "<stdin>", line 5, in <module>
             get_images(wrong_url) # doctest: +ELLIPSIS
           File ".../downloads.py", line 370, in get_images
-            raise ValueError(...)
-        ValueError: unable to get http://...; are you sure the path is correct?
+            raise ImagesNotFoundError(...)
+        ImagesNotFoundError: unable to get http://...; are you sure the path is correct?
     """,
     "no-checksums": """
     The SHA256SUMS file must exist on the server::
