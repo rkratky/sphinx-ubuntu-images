@@ -559,3 +559,33 @@ class TestUbuntuImagesDirective:
             url="https://cdimage.ubuntu.com/releases/noble/release/",
             supported=True,
         )
+
+    def test_flavor_option_empty_value(self):
+        """Test that :flavor: with no value converts to an empty string."""
+        assert UbuntuImagesDirective.option_spec["flavor"](None) == ""
+        assert UbuntuImagesDirective.option_spec["flavor"](" Xubuntu ") == "xubuntu"
+
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_releases")
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_images")
+    def test_run_with_empty_flavor_value(
+        self, mock_get_images, mock_get_releases, mock_directive
+    ):
+        """Test that an empty :flavor: value falls back to the default."""
+        mock_get_releases.return_value = [
+            Release(
+                codename="noble",
+                name="Noble Numbat",
+                version="24.04 LTS",
+                date=dt.datetime(2024, 4, 25, tzinfo=dt.timezone.utc),
+                upgradable=True,
+            )
+        ]
+        mock_get_images.return_value = []
+        mock_directive.options = {"flavor": "", "empty": "none"}
+
+        mock_directive.run()
+
+        mock_get_images.assert_called_once_with(
+            url="https://cdimage.ubuntu.com/releases/noble/release/",
+            supported=True,
+        )

@@ -194,7 +194,7 @@ class UbuntuImagesDirective(SphinxDirective):
 
     option_spec = {
         "releases": str,
-        "flavor": lambda s: s.strip().lower(),
+        "flavor": lambda s: "" if s is None else s.strip().lower(),  # pyright: ignore[reportUnnecessaryComparison]
         "lts-only": lambda _s: True,
         "image-types": parse_set,
         "archs": parse_set,
