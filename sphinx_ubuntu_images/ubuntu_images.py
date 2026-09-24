@@ -14,8 +14,8 @@ The options that may be specified under the directive are as follows:
 ``:flavor:`` *flavor (string)*
     The flavor of Ubuntu images to list, e.g. ``xubuntu``, ``kubuntu``, or
     ``lubuntu``. Defaults to ``ubuntu`` (the "vanilla" flavor). Images are
-    sourced from the equivalent flavor directory under cdimage.ubuntu.com
-    (e.g. https://cdimage.ubuntu.com/xubuntu/releases/...), and only
+    sourced from the equivalent flavor directory under https://cdimage.ubuntu.com
+    (e.g. ``https://cdimage.ubuntu.com/xubuntu/releases/...``), and only
     filenames with a matching prefix (e.g. ``xubuntu-26.04-minimal-amd64.iso``)
     are included. The flavor name is also used in the heading of each
     release entry.
