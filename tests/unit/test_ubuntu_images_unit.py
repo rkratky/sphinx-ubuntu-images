@@ -509,6 +509,53 @@ class TestUbuntuImagesDirective:
 
     @patch("sphinx_ubuntu_images.ubuntu_images.get_releases")
     @patch("sphinx_ubuntu_images.ubuntu_images.get_images")
+    def test_run_with_flavor_titles(
+        self, mock_get_images, mock_get_releases, mock_directive
+    ):
+        """Test that headings use known flavor display titles."""
+        mock_get_releases.return_value = [
+            Release(
+                codename="noble",
+                name="Noble Numbat",
+                version="24.04 LTS",
+                date=dt.datetime(2024, 4, 25, tzinfo=dt.timezone.utc),
+                upgradable=True,
+            )
+        ]
+        mock_directive.options = {"flavor": "ubuntustudio"}
+        mock_get_images.return_value = [
+            Image(
+                url="http://example.com/ubuntustudio-24.04-desktop-amd64.iso",
+                name="ubuntustudio-24.04-desktop-amd64.iso",
+                date=dt.date(2024, 4, 25),
+                sha256="abcd1234" * 8,
+            )
+        ]
+
+        result = mock_directive.run()
+
+        assert result[0][0][0].astext() == (
+            "Ubuntu Studio 24.04 LTS (Noble Numbat) images:"
+        )
+
+        mock_directive.options = {"flavor": "ubuntu-mate"}
+        mock_get_images.return_value = [
+            Image(
+                url="http://example.com/ubuntu-mate-24.04-desktop-amd64.iso",
+                name="ubuntu-mate-24.04-desktop-amd64.iso",
+                date=dt.date(2024, 4, 25),
+                sha256="efgh5678" * 8,
+            )
+        ]
+
+        result = mock_directive.run()
+
+        assert result[0][0][0].astext() == (
+            "Ubuntu MATE 24.04 LTS (Noble Numbat) images:"
+        )
+
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_releases")
+    @patch("sphinx_ubuntu_images.ubuntu_images.get_images")
     def test_run_flavor_cdimage_template_override(
         self, mock_get_images, mock_get_releases, mock_directive
     ):

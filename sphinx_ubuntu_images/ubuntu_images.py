@@ -184,6 +184,23 @@ def parse_set(s: str) -> set[str]:
     return {elem.strip() for elem in s.replace(",", " ").split()}
 
 
+flavor_titles = {
+    "edubuntu": "Edubuntu",
+    "kubuntu": "Kubuntu",
+    "lubuntu": "Lubuntu",
+    "mythbuntu": "Mythbuntu",
+    "ubuntu": "Ubuntu",
+    "ubuntu-budgie": "Ubuntu Budgie",
+    "ubuntu-gnome": "Ubuntu GNOME",
+    "ubuntu-mate": "Ubuntu MATE",
+    "ubuntu-unity": "Ubuntu Unity",
+    "ubuntucinnamon": "Ubuntu Cinnamon",
+    "ubuntukylin": "Ubuntu Kylin",
+    "ubuntustudio": "Ubuntu Studio",
+    "xubuntu": "Xubuntu",
+}
+
+
 class UbuntuImagesDirective(SphinxDirective):
     """Sphinx directive for generating Ubuntu image download lists.
 
@@ -259,12 +276,12 @@ class UbuntuImagesDirective(SphinxDirective):
             lts=self.options.get("lts-only"),
             supported=True,
         )
+        flavor_title = flavor_titles.get(flavor, flavor.replace("-", " ").title())
         for release in reversed(releases):
             release_item = nodes.list_item(
                 "",
                 nodes.paragraph(
-                    text=f"{flavor.replace('-', ' ').title()} "
-                    f"{release.version} ({release.name}) images:"
+                    text=f"{flavor_title} {release.version} ({release.name}) images:"
                 ),
             )
             images = filter_images(
